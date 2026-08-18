@@ -2,7 +2,7 @@ const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
 const { z } = require('zod');
 
-const BASE_URL = process.env.RAILWAY_BASE_URL; // e.g. https://webhook-production-53ad.up.railway.app
+const BASE_URL = process.env.RAILWAY_BASE_URL;
 const SECRET = process.env.EMAIL_WEBHOOK_SECRET;
 
 if (!BASE_URL) {
