@@ -72,4 +72,41 @@ async function getById(id) {
   return rows[0] ? toRecord(rows[0]) : null;
 }
 
-module.exports = { init, insertEmail, setAgentSummary, listRecent, getById };
+// Flexible search/filter used by /api/emails/search and the MCP tools.
+// filters: { sender, domain, since, until, hasAttachment, keyword, field, limit }
+async function queryEmails(filters = {}) {
+  const where = [];
+  const params = [];
+  const p = (v) => { params.push(v); return `$${params.length}`; };
+
+  if (filters.sender) where.push(`"from" ILIKE ${p('%' + filters.sender + '%')}`);
+  if (filters.domain) where.push(`"from" ILIKE ${p('%@' + filters.domain.replace(/^@/, ''))}`);
+  if (filters.since) where.push(`received_at >= ${p(filters.since)}`);
+  if (filters.until) where.push(`received_at <= ${p(filters.until)}`);
+  if (filters.hasAttachment) where.push(`jsonb_array_length(coalesce(attachments, '[]'::jsonb)) > 0`);
+
+  if (filters.keyword) {
+    const kw = p('%' + filters.keyword + '%');
+    const field = filters.field || 'all';
+    const fieldMap = {
+      subject: `subject ILIKE ${kw}`,
+      body: `(text_body ILIKE ${kw} OR html_body ILIKE ${kw})`,
+      from: `"from" ILIKE ${kw}`,
+      to: `"to" ILIKE ${kw}`,
+      all: `(subject ILIKE ${kw} OR text_body ILIKE ${kw} OR html_body ILIKE ${kw} OR "from" ILIKE ${kw} OR "to" ILIKE ${kw})`,
+    };
+    where.push(fieldMap[field] || fieldMap.all);
+  }
+
+  const limit = Math.min(Number(filters.limit) || 20, MAX_QUERY_LIMIT);
+  const sql = `SELECT * FROM emails
+    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY received_at DESC LIMIT ${p(limit)}`;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(toRecord);
+}
+
+const MAX_QUERY_LIMIT = 100;
+
+module.exports = { init, insertEmail, setAgentSummary, listRecent, getById, queryEmails };

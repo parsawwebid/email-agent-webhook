@@ -132,6 +132,23 @@ app.get('/api/emails/:id', checkSecret, async (req, res) => {
   res.json(found);
 });
 
+// Flexible search/filter — powers list_emails_by_domain, search_emails,
+// list_emails_in_range, and the combined list_emails MCP tools.
+app.get('/api/emails/search', checkSecret, async (req, res) => {
+  const { sender, domain, since, until, has_attachment, keyword, field, limit } = req.query;
+  const results = await db.queryEmails({
+    sender,
+    domain,
+    since,
+    until,
+    hasAttachment: has_attachment === 'true',
+    keyword,
+    field,
+    limit,
+  });
+  res.json(results);
+});
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
