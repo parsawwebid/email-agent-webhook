@@ -55,13 +55,14 @@
 
 پوشه‌ی `mcp-server/` یه MCP server کوچیکه که دو تا ابزار می‌ده: `list_recent_emails` و `get_email`. این‌ها از همون API روی Railway (با `x-email-secret`) می‌خونن.
 
-```
-cd mcp-server
+```bash
+git clne https://github.com/parsawwebid/email-agent-webhook
+cd email-agent-webhook/mcp-server
 npm install
 claude mcp add --transport stdio email-agent \
   --env RAILWAY_BASE_URL=https://webhook-production-53ad.up.railway.app \
-  --env EMAIL_WEBHOOK_SECRET=<همون secret روی Railway> \
-  -- node /مسیر/کامل/mcp-server/index.js
+  --env EMAIL_WEBHOOK_SECRET=<Railway Secret> \
+  -- node /<FullPath>/mcp-server/index.js
 ```
 
 بعدش داخل یه session از Claude Code می‌تونی بگی: «آخرین ایمیل‌هایی که رسیده رو نشونم بده» یا «ایمیل فلان id رو کامل بخون» و از طریق همین ابزارها جواب می‌ده.
@@ -70,7 +71,7 @@ claude mcp add --transport stdio email-agent \
 
 ایمیل‌ها دیگه در حافظه نگه‌داری نمی‌شن — توی یه سرویس Postgres جدا (با volume دائمی) روی همین پروژه‌ی Railway ذخیره می‌شن، پس با هر redeploy/restart از بین نمی‌رن.
 
-سرویس اصلی (`webhook-v2` یا هرچی که هست) باید متغیر `DATABASE_URL` رو داشته باشه، مثلاً:
+سرویس اصلی باید متغیر `DATABASE_URL` رو داشته باشه، مثلاً:
 ```
 postgresql://appuser:${{postgres.POSTGRES_PASSWORD}}@postgres.railway.internal:5432/emailagent
 ```
