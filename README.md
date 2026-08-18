@@ -60,7 +60,7 @@ git clne https://github.com/parsawwebid/email-agent-webhook
 cd email-agent-webhook/mcp-server
 npm install
 claude mcp add --transport stdio email-agent \
-  --env RAILWAY_BASE_URL=https://webhook-production-53ad.up.railway.app \
+  --env RAILWAY_BASE_URL=https://xxxx.up.railway.app \
   --env EMAIL_WEBHOOK_SECRET=<Railway Secret> \
   -- node /<FullPath>/mcp-server/index.js
 ```
