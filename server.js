@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const { WebSocketServer } = require('ws');
+const db = require('./db');
 
 const app = express();
 app.use(express.json({ limit: '25mb' }));
@@ -13,6 +14,7 @@ const SHARED_SECRET = process.env.EMAIL_WEBHOOK_SECRET;
 const AGENT_WEBHOOK_URL = process.env.AGENT_WEBHOOK_URL;
 // How often (ms) the dashboard auto-refreshes over the websocket, even with no new mail
 const BROADCAST_INTERVAL_MS = Number(process.env.BROADCAST_INTERVAL_MS || 10000);
+const MAX_RECENT = 50;
 
 // Optional: OpenAI-compatible endpoint (vLLM / mistral.rs / etc) serving a Hermes model.
 // Every incoming email gets triaged through it automatically.
@@ -44,10 +46,6 @@ async function triageWithHermes(email) {
   return data.choices?.[0]?.message?.content?.trim() || null;
 }
 
-// Keep the last N emails in memory
-const recent = [];
-const MAX_RECENT = 50;
-
 function checkSecret(req, res, next) {
   if (!SHARED_SECRET) return next(); // no secret configured yet, allow through
   const provided = req.get('x-email-secret');
@@ -57,12 +55,13 @@ function checkSecret(req, res, next) {
   next();
 }
 
-app.get('/api/status', (_req, res) => {
-  res.json({ ok: true, service: 'email-agent-webhook', received: recent.length });
+app.get('/api/status', async (_req, res) => {
+  const recent = await db.listRecent(1);
+  res.json({ ok: true, service: 'email-agent-webhook', dbConnected: true, hasEmails: recent.length > 0 });
 });
 
-app.get('/emails', (_req, res) => {
-  res.json(recent);
+app.get('/emails', async (_req, res) => {
+  res.json(await db.listRecent(MAX_RECENT));
 });
 
 app.post('/webhook/email', checkSecret, async (req, res) => {
@@ -75,8 +74,12 @@ app.post('/webhook/email', checkSecret, async (req, res) => {
   });
 
   const record = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, receivedAt: new Date().toISOString(), ...email };
-  recent.unshift(record);
-  if (recent.length > MAX_RECENT) recent.length = MAX_RECENT;
+
+  try {
+    await db.insertEmail(record);
+  } catch (err) {
+    console.error('Failed to persist email to db:', err);
+  }
 
   broadcast({ type: 'new_email', email: record });
 
@@ -98,9 +101,14 @@ app.post('/webhook/email', checkSecret, async (req, res) => {
   // Runs after responding to Cloudflare so it never delays/risks the email accept.
   if (HERMES_API_URL) {
     triageWithHermes(record)
-      .then((summary) => {
+      .then(async (summary) => {
         if (!summary) return;
         record.agentSummary = summary;
+        try {
+          await db.setAgentSummary(record.id, summary);
+        } catch (err) {
+          console.error('Failed to persist agent summary:', err);
+        }
         broadcast({ type: 'email_update', id: record.id, agentSummary: summary });
       })
       .catch((err) => console.error('Hermes triage failed:', err));
@@ -113,13 +121,13 @@ app.post('/webhook/email', checkSecret, async (req, res) => {
 });
 
 // --- Authenticated read API, meant for agents/tools (e.g. an MCP server for Claude Code) ---
-app.get('/api/emails', checkSecret, (req, res) => {
+app.get('/api/emails', checkSecret, async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 20, MAX_RECENT);
-  res.json(recent.slice(0, limit));
+  res.json(await db.listRecent(limit));
 });
 
-app.get('/api/emails/:id', checkSecret, (req, res) => {
-  const found = recent.find((e) => e.id === req.params.id);
+app.get('/api/emails/:id', checkSecret, async (req, res) => {
+  const found = await db.getById(req.params.id);
   if (!found) return res.status(404).json({ error: 'not found' });
   res.json(found);
 });
@@ -134,15 +142,24 @@ function broadcast(msg) {
   });
 }
 
-wss.on('connection', (ws) => {
+wss.on('connection', async (ws) => {
+  const recent = await db.listRecent(MAX_RECENT);
   ws.send(JSON.stringify({ type: 'init', emails: recent }));
 });
 
 // Periodic refresh broadcast, independent of new mail arriving
-setInterval(() => {
+setInterval(async () => {
+  const recent = await db.listRecent(MAX_RECENT);
   broadcast({ type: 'refresh', emails: recent, serverTime: new Date().toISOString() });
 }, BROADCAST_INTERVAL_MS);
 
-server.listen(PORT, () => {
-  console.log(`email-agent-webhook listening on port ${PORT}`);
-});
+db.init()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`email-agent-webhook listening on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });

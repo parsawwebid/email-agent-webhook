@@ -65,3 +65,13 @@ claude mcp add --transport stdio email-agent \
 ```
 
 بعدش داخل یه session از Claude Code می‌تونی بگی: «آخرین ایمیل‌هایی که رسیده رو نشونم بده» یا «ایمیل فلان id رو کامل بخون» و از طریق همین ابزارها جواب می‌ده.
+
+## دیتابیس (Postgres)
+
+ایمیل‌ها دیگه در حافظه نگه‌داری نمی‌شن — توی یه سرویس Postgres جدا (با volume دائمی) روی همین پروژه‌ی Railway ذخیره می‌شن، پس با هر redeploy/restart از بین نمی‌رن.
+
+سرویس اصلی (`webhook-v2` یا هرچی که هست) باید متغیر `DATABASE_URL` رو داشته باشه، مثلاً:
+```
+postgresql://appuser:${{postgres.POSTGRES_PASSWORD}}@postgres.railway.internal:5432/emailagent
+```
+(این یه Railway variable reference هست، خودش موقع دیپلوی resolve می‌شه.)
