@@ -1,0 +1,15 @@
+{
+  "name": "email-agent-forwarder",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  },
+  "dependencies": {
+    "postal-mime": "^2.2.1"
+  }
+}

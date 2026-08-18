@@ -1,0 +1,8 @@
+name = "email-agent-forwarder"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# Set these with:
+#   npx wrangler secret put RAILWAY_WEBHOOK_URL
+#   npx wrangler secret put EMAIL_WEBHOOK_SECRET
+# (don't put secrets directly in this file)
