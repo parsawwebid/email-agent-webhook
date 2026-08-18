@@ -1,254 +1,133 @@
 <!doctype html>
-<html lang="fa" dir="ltr">
+<html lang="fa" dir="ltr" data-theme="dark">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>mail-relay // live</title>
+<title>Inbox</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #0a0d10;
-    --panel: #10151a;
-    --panel-2: #141a20;
-    --line: #1d252c;
-    --text: #d9e2ea;
-    --dim: #5c6b78;
-    --dimmer: #37424c;
-    --amber: #f0a83c;
-    --green: #3fbf7f;
-    --red: #ef5b5b;
-    --blue: #6fb1e6;
-    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --row-hover: #f7f7f6;
+    --border: #e6e5e1;
+    --text: #1a1a18;
+    --text-2: #6b6a64;
+    --text-3: #a2a099;
+    --accent: #d8683a;
+    --accent-bg: #fbece5;
+    --green: #1d9e75;
+    --blue: #378add;
+    --blue-bg: #e6f1fb;
+    --font: "Inter", -apple-system, "Segoe UI", sans-serif;
+  }
+  [data-theme="dark"]{
+    --bg: #161614;
+    --panel: #1c1c1a;
+    --row-hover: #232320;
+    --border: #302f2c;
+    --text: #efeee9;
+    --text-2: #a2a099;
+    --text-3: #6b6a64;
+    --accent: #ef9f27;
+    --accent-bg: #412402;
+    --green: #5dcaa5;
+    --blue: #85b7eb;
+    --blue-bg: #042c53;
   }
   *{ box-sizing: border-box; }
-  html,body{
-    margin:0; padding:0; height:100%;
-    background: var(--bg);
+  html,body{ margin:0; padding:0; background: var(--bg); }
+  body{
+    font-family: var(--font);
     color: var(--text);
-    font-family: var(--mono);
     -webkit-font-smoothing: antialiased;
   }
-  body{
-    background-image:
-      radial-gradient(circle at 15% -10%, rgba(240,168,60,0.05), transparent 40%),
-      linear-gradient(var(--line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--line) 1px, transparent 1px);
-    background-size: auto, 100% 28px, 28px 100%;
-    background-position: 0 0;
-  }
-  .wrap{
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 28px 20px 80px;
-  }
+  .wrap{ max-width: 720px; margin: 0 auto; padding: 24px 20px 80px; }
+
   header{
-    display:flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 16px;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 18px;
-    margin-bottom: 22px;
-    flex-wrap: wrap;
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom: 16px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
   }
-  .brand{
-    display:flex;
-    align-items:baseline;
-    gap:10px;
+  h1{ font-size: 17px; font-weight: 600; margin:0; }
+  .status-row{ display:flex; align-items:center; gap: 16px; }
+  .pill-stat{ font-size: 13px; color: var(--text-2); }
+  .pill-stat b{ color: var(--text); font-weight: 600; }
+  .live{ display:flex; align-items:center; gap:6px; font-size:12px; color: var(--text-2); }
+  .live .dot{ width:6px; height:6px; border-radius:50%; background: var(--text-3); }
+  .live .dot.on{ background: var(--green); }
+  .live .dot.flash{ animation: flash .8s ease-out; }
+  @keyframes flash{ 0%{ background: var(--accent);} 100%{ background: var(--green);} }
+
+  .theme-btn{
+    border: 1px solid var(--border); background: var(--panel); color: var(--text-2);
+    width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+    display:flex; align-items:center; justify-content:center;
   }
-  .brand .glyph{
-    color: var(--amber);
-    font-weight:700;
-  }
-  h1{
-    font-size: 15px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin:0;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .sub{
-    color: var(--dim);
-    font-size: 12px;
-    margin-top: 4px;
-    letter-spacing: 0.02em;
-  }
-  .status{
-    display:flex;
-    align-items:center;
-    gap: 22px;
-    font-size: 12px;
-    color: var(--dim);
-  }
-  .status .metric{ text-align:right; }
-  .status .metric b{
-    display:block;
-    color: var(--text);
-    font-size: 18px;
-    font-weight: 600;
-  }
-  .pulse-row{
-    display:flex; align-items:center; gap:8px;
-  }
-  .dot{
-    width:8px; height:8px; border-radius:50%;
-    background: var(--dimmer);
-    box-shadow: 0 0 0 0 rgba(63,191,127,0.5);
-  }
-  .dot.live{
-    background: var(--green);
-    animation: pulse 2.2s infinite;
-  }
-  .dot.down{ background: var(--red); }
-  .dot.flash{ animation: flash 0.9s ease-out; }
-  @keyframes pulse{
-    0%{ box-shadow: 0 0 0 0 rgba(63,191,127,0.45); }
-    70%{ box-shadow: 0 0 0 7px rgba(63,191,127,0); }
-    100%{ box-shadow: 0 0 0 0 rgba(63,191,127,0); }
-  }
-  @keyframes flash{
-    0%{ background: var(--amber); box-shadow: 0 0 0 0 rgba(240,168,60,0.6); }
-    100%{ background: var(--green); box-shadow: 0 0 0 10px rgba(240,168,60,0); }
-  }
-  .live-label{
-    text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    color: var(--dim);
-  }
-  .live-label.on{ color: var(--green); }
-  .live-label.off{ color: var(--red); }
+  .theme-btn:hover{ background: var(--row-hover); }
+  .theme-btn svg{ width:15px; height:15px; }
 
   .empty{
-    border: 1px dashed var(--line);
-    border-radius: 6px;
-    padding: 48px 20px;
-    text-align:center;
-    color: var(--dim);
-    font-size: 13px;
-  }
-  .empty .big{
-    color: var(--dimmer);
-    font-size: 28px;
-    margin-bottom: 10px;
+    text-align:center; color: var(--text-3); font-size: 13px;
+    padding: 60px 20px; border: 1px dashed var(--border); border-radius: 12px; margin-top: 16px;
   }
 
-  .log{
-    display:flex;
-    flex-direction:column;
-    gap: 8px;
-  }
+  .list{ display:flex; flex-direction:column; }
   .row{
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-left: 2px solid var(--dimmer);
-    border-radius: 4px;
-    padding: 12px 14px;
-    cursor:pointer;
-    transition: border-color .15s ease, background .15s ease;
+    display:flex; gap: 12px; padding: 14px 4px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
   }
-  .row:hover{ background: var(--panel-2); border-left-color: var(--amber); }
-  .row.new{
-    animation: slidein .35s ease-out, glow 1.6s ease-out;
-    border-left-color: var(--green);
+  .row:hover{ background: var(--row-hover); }
+  .row.new{ animation: slidein .3s ease-out; }
+  @keyframes slidein{ from{ opacity:0; transform: translateY(-4px);} to{ opacity:1; transform:none; } }
+
+  .avatar{
+    flex: none; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent-bg); color: var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 13px; font-weight: 600;
   }
-  @keyframes slidein{
-    from{ transform: translateY(-6px); opacity:0; }
-    to{ transform: translateY(0); opacity:1; }
-  }
-  @keyframes glow{
-    0%{ background: rgba(63,191,127,0.10); }
-    100%{ background: var(--panel); }
-  }
-  .row-top{
-    display:flex;
-    justify-content: space-between;
-    gap: 14px;
-    font-size: 13px;
-  }
-  .from{ color: var(--text); font-weight: 500; }
-  .arrow{ color: var(--dimmer); margin: 0 6px; }
-  .to{ color: var(--dim); }
-  .time{ color: var(--dimmer); font-size: 11px; white-space:nowrap; }
-  .subject{
-    margin-top: 6px;
-    font-size: 13px;
-    color: var(--amber);
-  }
-  .subject::before{ content: "» "; color: var(--dimmer); }
+  .body{ flex: 1; min-width: 0; }
+  .line1{ display:flex; justify-content:space-between; gap: 8px; }
+  .from{ font-weight: 600; font-size: 14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .time{ font-size: 12px; color: var(--text-3); white-space:nowrap; flex:none; }
+  .subject{ font-size: 13px; color: var(--text-2); margin-top: 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .preview{
-    margin-top: 8px;
-    font-size: 12px;
-    color: var(--dim);
-    line-height: 1.6;
-    white-space: pre-wrap;
-    display:none;
-    border-top: 1px dashed var(--line);
-    padding-top: 8px;
+    font-size: 13px; color: var(--text-2); line-height: 1.6; white-space: pre-wrap;
+    margin-top: 8px; display:none; border-top: 1px solid var(--border); padding-top: 8px;
   }
-  .row.open .preview{ display:block; }
-  .row.open{ border-left-color: var(--amber); }
+  .row.open .preview{ display: block; }
 
-  .hermes{
-    margin-top: 8px;
-    padding: 8px 10px;
-    border-radius: 3px;
-    background: rgba(111,177,230,0.06);
-    border-left: 2px solid var(--blue);
-    font-size: 12px;
-    color: #a9c8e0;
-    line-height: 1.6;
+  .tag{
+    display:inline-flex; align-items:center; gap: 6px;
+    font-size: 12px; margin-top: 8px; padding: 4px 10px; border-radius: 8px;
+    background: var(--blue-bg); color: var(--blue);
   }
-  .hermes b{ color: var(--blue); }
-  .hermes.pending{ color: var(--dimmer); font-style: italic; }
+  .tag.pending{ background: transparent; color: var(--text-3); padding-left:0; font-style: italic; }
 
-  footer{
-    margin-top: 30px;
-    color: var(--dimmer);
-    font-size: 11px;
-    text-align:center;
-    letter-spacing: 0.04em;
-  }
-
-  ::selection{ background: rgba(240,168,60,0.25); }
+  footer{ margin-top: 24px; text-align:center; font-size: 11px; color: var(--text-3); }
 </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div>
-        <div class="brand">
-          <span class="glyph">&gt;_</span>
-          <h1>mail-relay</h1>
-        </div>
-        <div class="sub" id="sub">cloudflare email → webhook → agents</div>
+        <h1>Inbox</h1>
       </div>
-      <div class="status">
-        <div class="pulse-row">
-          <span class="dot" id="dot"></span>
-          <span class="live-label" id="liveLabel">connecting</span>
-        </div>
-        <div class="metric">
-          <b id="count">0</b>
-          received
-        </div>
-        <div class="metric">
-          <b id="lastUpdate">—</b>
-          last sync
-        </div>
+      <div class="status-row">
+        <span class="pill-stat"><b id="count">0</b> emails</span>
+        <span class="live"><span class="dot" id="dot"></span><span id="liveLabel">connecting</span></span>
+        <button class="theme-btn" id="themeBtn" aria-label="toggle theme">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
       </div>
     </header>
 
-    <div id="empty" class="empty">
-      <div class="big">∅</div>
-      no email received yet — send something to <span id="domainHint">your domain</span>
-    </div>
-
-    <div class="log" id="log"></div>
-
-    <footer>auto-refresh over websocket · every <span id="intervalLabel">10</span>s</footer>
+    <div id="empty" class="empty">no email yet — send something to <span id="domainHint"></span></div>
+    <div class="list" id="log"></div>
+    <footer>auto-syncs live over websocket</footer>
   </div>
 
 <script>
@@ -257,109 +136,88 @@
   const dotEl = document.getElementById('dot');
   const liveLabelEl = document.getElementById('liveLabel');
   const countEl = document.getElementById('count');
-  const lastUpdateEl = document.getElementById('lastUpdate');
+  const themeBtn = document.getElementById('themeBtn');
 
   let known = new Set();
 
-  function fmtTime(iso){
-    const d = new Date(iso);
-    return d.toLocaleTimeString([], { hour12: false });
+  function initials(addr){
+    const name = (addr || '?').split('@')[0];
+    const parts = name.replace(/[._-]/g, ' ').trim().split(' ');
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
   }
-
-  function escapeHtml(s){
-    return (s || '').replace(/[&<>"']/g, (c) => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[c]));
-  }
+  function fmtTime(iso){ return new Date(iso).toLocaleTimeString([], { hour12: false, hour:'2-digit', minute:'2-digit' }); }
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function renderAll(emails){
     countEl.textContent = emails.length;
     emptyEl.style.display = emails.length ? 'none' : 'block';
     logEl.innerHTML = '';
-    emails.forEach((e) => logEl.appendChild(makeRow(e, false)));
+    emails.forEach(e => logEl.appendChild(makeRow(e, false)));
     known = new Set(emails.map(e => e.id));
   }
-
   function prependOne(email){
     known.add(email.id);
     countEl.textContent = known.size;
     emptyEl.style.display = 'none';
-    const row = makeRow(email, true);
-    logEl.prepend(row);
+    logEl.prepend(makeRow(email, true));
     flashDot();
   }
-
+  function tagHtml(summary){
+    if (summary) return `<div class="tag">${escapeHtml(summary)}</div>`;
+    return '';
+  }
   function makeRow(e, isNew){
     const row = document.createElement('div');
     row.className = 'row' + (isNew ? ' new' : '');
     row.dataset.id = e.id;
     const preview = e.text || e.html || '(empty body)';
     row.innerHTML = `
-      <div class="row-top">
-        <div><span class="from">${escapeHtml(e.from)}</span><span class="arrow">→</span><span class="to">${escapeHtml(e.to)}</span></div>
-        <div class="time">${fmtTime(e.receivedAt)}</div>
+      <div class="avatar">${initials(e.from)}</div>
+      <div class="body">
+        <div class="line1"><span class="from">${escapeHtml(e.from)}</span><span class="time">${fmtTime(e.receivedAt)}</span></div>
+        <div class="subject">${escapeHtml(e.subject || '(no subject)')}</div>
+        <div class="preview">${escapeHtml(preview).slice(0,2000)}</div>
+        ${tagHtml(e.agentSummary)}
       </div>
-      <div class="subject">${escapeHtml(e.subject || '(no subject)')}</div>
-      <div class="preview">${escapeHtml(preview).slice(0, 2000)}</div>
-      ${hermesBlockHtml(e.agentSummary)}
     `;
     row.addEventListener('click', () => row.classList.toggle('open'));
     return row;
   }
-
-  function hermesBlockHtml(summary){
-    if (summary) return `<div class="hermes"><b>hermes ›</b> ${escapeHtml(summary)}</div>`;
-    return '';
-  }
-
   function applyHermesUpdate(id, summary){
-    const row = logEl.querySelector(`.row[data-id="${CSS.escape(id)}"]`);
+    const row = logEl.querySelector(`.row[data-id="${CSS.escape(id)}"] .body`);
     if (!row) return;
-    let block = row.querySelector('.hermes');
-    if (!block){
-      block = document.createElement('div');
-      row.appendChild(block);
-    }
-    block.className = 'hermes';
-    block.innerHTML = `<b>hermes ›</b> ${escapeHtml(summary)}`;
+    let tag = row.querySelector('.tag');
+    if (!tag){ tag = document.createElement('div'); row.appendChild(tag); }
+    tag.className = 'tag';
+    tag.textContent = summary;
   }
-
-  function flashDot(){
-    dotEl.classList.remove('flash');
-    void dotEl.offsetWidth;
-    dotEl.classList.add('flash');
-  }
-
+  function flashDot(){ dotEl.classList.remove('flash'); void dotEl.offsetWidth; dotEl.classList.add('flash'); }
   function setLive(on){
-    dotEl.classList.toggle('live', on);
-    dotEl.classList.toggle('down', !on);
-    liveLabelEl.textContent = on ? 'live' : 'disconnected';
-    liveLabelEl.classList.toggle('on', on);
-    liveLabelEl.classList.toggle('off', !on);
+    dotEl.classList.toggle('on', on);
+    liveLabelEl.textContent = on ? 'live' : 'reconnecting';
   }
 
   function connect(){
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${proto}//${location.host}/ws`);
-
     ws.onopen = () => setLive(true);
     ws.onclose = () => { setLive(false); setTimeout(connect, 2000); };
     ws.onerror = () => ws.close();
-
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
-      lastUpdateEl.textContent = new Date().toLocaleTimeString([], { hour12: false });
-      if (msg.type === 'init'){
-        renderAll(msg.emails);
-      } else if (msg.type === 'refresh'){
-        renderAll(msg.emails);
-      } else if (msg.type === 'new_email'){
-        if (!known.has(msg.email.id)) prependOne(msg.email);
-      } else if (msg.type === 'email_update'){
-        applyHermesUpdate(msg.id, msg.agentSummary);
-      }
+      if (msg.type === 'init' || msg.type === 'refresh') renderAll(msg.emails);
+      else if (msg.type === 'new_email' && !known.has(msg.email.id)) prependOne(msg.email);
+      else if (msg.type === 'email_update') applyHermesUpdate(msg.id, msg.agentSummary);
     };
   }
+
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  });
 
   document.getElementById('domainHint').textContent = location.host;
   connect();
