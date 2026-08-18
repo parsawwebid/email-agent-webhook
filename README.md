@@ -40,3 +40,28 @@
 آدرس ریشه سرویس (`/`) یه داشبورد زنده نشون می‌ده — لیست ایمیل‌های دریافتی، با WebSocket که خودش هر ۱۰ ثانیه sync می‌شه و ایمیل جدید رو هم فوری push می‌کنه (لازم نیست صفحه رو رفرش کنی).
 
 با متغیر محیطی `BROADCAST_INTERVAL_MS` می‌تونی فاصله‌ی sync دوره‌ای رو تغییر بدی (پیش‌فرض ۱۰۰۰۰ = ۱۰ ثانیه).
+
+## وصل کردن به Hermes (خودمیزبان، OpenAI-compatible)
+
+روی Railway این متغیرها رو ست کن:
+
+- `HERMES_API_URL` — آدرس سرور vLLM/mistral.rs (بدون `/v1/...` در آخرش)، مثلاً `https://your-host:8000`
+- `HERMES_API_KEY` — اگه سرورت auth می‌خواد (اختیاری)
+- `HERMES_MODEL` — اسم مدل، مثلاً `NousResearch/Hermes-3-Llama-3.1-8B` (پیش‌فرض `hermes-3`)
+
+از اون به بعد هر ایمیل خودکار برای triage به Hermes فرستاده می‌شه و خلاصه‌ش زیر همون ایمیل روی داشبورد (لایو، بدون رفرش) نشون داده می‌شه.
+
+## وصل کردن به Claude Code (از طریق MCP)
+
+پوشه‌ی `mcp-server/` یه MCP server کوچیکه که دو تا ابزار می‌ده: `list_recent_emails` و `get_email`. این‌ها از همون API روی Railway (با `x-email-secret`) می‌خونن.
+
+```
+cd mcp-server
+npm install
+claude mcp add --transport stdio email-agent \
+  --env RAILWAY_BASE_URL=https://webhook-production-53ad.up.railway.app \
+  --env EMAIL_WEBHOOK_SECRET=<همون secret روی Railway> \
+  -- node /مسیر/کامل/mcp-server/index.js
+```
+
+بعدش داخل یه session از Claude Code می‌تونی بگی: «آخرین ایمیل‌هایی که رسیده رو نشونم بده» یا «ایمیل فلان id رو کامل بخون» و از طریق همین ابزارها جواب می‌ده.

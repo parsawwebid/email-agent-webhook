@@ -18,6 +18,7 @@
     --amber: #f0a83c;
     --green: #3fbf7f;
     --red: #ef5b5b;
+    --blue: #6fb1e6;
     --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   *{ box-sizing: border-box; }
@@ -190,6 +191,19 @@
   .row.open .preview{ display:block; }
   .row.open{ border-left-color: var(--amber); }
 
+  .hermes{
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 3px;
+    background: rgba(111,177,230,0.06);
+    border-left: 2px solid var(--blue);
+    font-size: 12px;
+    color: #a9c8e0;
+    line-height: 1.6;
+  }
+  .hermes b{ color: var(--blue); }
+  .hermes.pending{ color: var(--dimmer); font-style: italic; }
+
   footer{
     margin-top: 30px;
     color: var(--dimmer);
@@ -278,6 +292,7 @@
   function makeRow(e, isNew){
     const row = document.createElement('div');
     row.className = 'row' + (isNew ? ' new' : '');
+    row.dataset.id = e.id;
     const preview = e.text || e.html || '(empty body)';
     row.innerHTML = `
       <div class="row-top">
@@ -286,9 +301,27 @@
       </div>
       <div class="subject">${escapeHtml(e.subject || '(no subject)')}</div>
       <div class="preview">${escapeHtml(preview).slice(0, 2000)}</div>
+      ${hermesBlockHtml(e.agentSummary)}
     `;
     row.addEventListener('click', () => row.classList.toggle('open'));
     return row;
+  }
+
+  function hermesBlockHtml(summary){
+    if (summary) return `<div class="hermes"><b>hermes ›</b> ${escapeHtml(summary)}</div>`;
+    return '';
+  }
+
+  function applyHermesUpdate(id, summary){
+    const row = logEl.querySelector(`.row[data-id="${CSS.escape(id)}"]`);
+    if (!row) return;
+    let block = row.querySelector('.hermes');
+    if (!block){
+      block = document.createElement('div');
+      row.appendChild(block);
+    }
+    block.className = 'hermes';
+    block.innerHTML = `<b>hermes ›</b> ${escapeHtml(summary)}`;
   }
 
   function flashDot(){
@@ -322,6 +355,8 @@
         renderAll(msg.emails);
       } else if (msg.type === 'new_email'){
         if (!known.has(msg.email.id)) prependOne(msg.email);
+      } else if (msg.type === 'email_update'){
+        applyHermesUpdate(msg.id, msg.agentSummary);
       }
     };
   }

@@ -14,6 +14,36 @@ const AGENT_WEBHOOK_URL = process.env.AGENT_WEBHOOK_URL;
 // How often (ms) the dashboard auto-refreshes over the websocket, even with no new mail
 const BROADCAST_INTERVAL_MS = Number(process.env.BROADCAST_INTERVAL_MS || 10000);
 
+// Optional: OpenAI-compatible endpoint (vLLM / mistral.rs / etc) serving a Hermes model.
+// Every incoming email gets triaged through it automatically.
+const HERMES_API_URL = process.env.HERMES_API_URL; // e.g. https://your-host:8000
+const HERMES_API_KEY = process.env.HERMES_API_KEY; // optional bearer token
+const HERMES_MODEL = process.env.HERMES_MODEL || 'hermes-3';
+
+async function triageWithHermes(email) {
+  if (!HERMES_API_URL) return null;
+  const body = (email.text || email.html || '').slice(0, 4000);
+  const resp = await fetch(`${HERMES_API_URL.replace(/\/$/, '')}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(HERMES_API_KEY ? { authorization: `Bearer ${HERMES_API_KEY}` } : {}),
+    },
+    body: JSON.stringify({
+      model: HERMES_MODEL,
+      messages: [
+        { role: 'system', content: 'You triage incoming emails. Reply with a 1-3 sentence summary and flag anything that needs action. Be concise, no preamble.' },
+        { role: 'user', content: `From: ${email.from}\nSubject: ${email.subject}\n\n${body}` },
+      ],
+      max_tokens: 250,
+      temperature: 0.2,
+    }),
+  });
+  if (!resp.ok) throw new Error(`Hermes API returned ${resp.status}`);
+  const data = await resp.json();
+  return data.choices?.[0]?.message?.content?.trim() || null;
+}
+
 // Keep the last N emails in memory
 const recent = [];
 const MAX_RECENT = 50;
@@ -50,7 +80,7 @@ app.post('/webhook/email', checkSecret, async (req, res) => {
 
   broadcast({ type: 'new_email', email: record });
 
-  // Hand off to your agent(s) here. Two common patterns:
+  // Hand off to your agent(s) here. A few common patterns:
   // 1) Forward to another service/agent over HTTP:
   if (AGENT_WEBHOOK_URL) {
     try {
@@ -64,10 +94,34 @@ app.post('/webhook/email', checkSecret, async (req, res) => {
     }
   }
 
-  // 2) Or call your agent logic directly in-process, e.g.:
+  // 2) Auto-triage every email through a Hermes (OpenAI-compatible) endpoint.
+  // Runs after responding to Cloudflare so it never delays/risks the email accept.
+  if (HERMES_API_URL) {
+    triageWithHermes(record)
+      .then((summary) => {
+        if (!summary) return;
+        record.agentSummary = summary;
+        broadcast({ type: 'email_update', id: record.id, agentSummary: summary });
+      })
+      .catch((err) => console.error('Hermes triage failed:', err));
+  }
+
+  // 3) Or call your agent logic directly in-process, e.g.:
   // await runAgent(email);
 
   res.status(200).json({ ok: true });
+});
+
+// --- Authenticated read API, meant for agents/tools (e.g. an MCP server for Claude Code) ---
+app.get('/api/emails', checkSecret, (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 20, MAX_RECENT);
+  res.json(recent.slice(0, limit));
+});
+
+app.get('/api/emails/:id', checkSecret, (req, res) => {
+  const found = recent.find((e) => e.id === req.params.id);
+  if (!found) return res.status(404).json({ error: 'not found' });
+  res.json(found);
 });
 
 const server = http.createServer(app);
