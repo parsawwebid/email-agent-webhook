@@ -18,10 +18,14 @@ async function init() {
       text_body TEXT,
       html_body TEXT,
       attachments JSONB,
-      agent_summary TEXT
+      agent_summary TEXT,
+      read_at TIMESTAMPTZ,
+      starred BOOLEAN NOT NULL DEFAULT false
     );
     CREATE INDEX IF NOT EXISTS emails_received_at_idx ON emails (received_at DESC);
   `);
+  await pool.query(`ALTER TABLE emails ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;`);
+  await pool.query(`ALTER TABLE emails ADD COLUMN IF NOT EXISTS starred BOOLEAN NOT NULL DEFAULT false;`);
 }
 
 function toRecord(row) {
@@ -35,6 +39,8 @@ function toRecord(row) {
     html: row.html_body,
     attachments: row.attachments || [],
     agentSummary: row.agent_summary || undefined,
+    isRead: !!row.read_at,
+    starred: !!row.starred,
   };
 }
 
@@ -57,6 +63,17 @@ async function insertEmail(record) {
 
 async function setAgentSummary(id, summary) {
   await pool.query(`UPDATE emails SET agent_summary = $2 WHERE id = $1`, [id, summary]);
+}
+
+async function setRead(id, isRead) {
+  await pool.query(
+    `UPDATE emails SET read_at = $2 WHERE id = $1`,
+    [id, isRead ? new Date().toISOString() : null]
+  );
+}
+
+async function setStarred(id, starred) {
+  await pool.query(`UPDATE emails SET starred = $2 WHERE id = $1`, [id, !!starred]);
 }
 
 async function listRecent(limit = 20) {
@@ -109,4 +126,4 @@ async function queryEmails(filters = {}) {
 
 const MAX_QUERY_LIMIT = 100;
 
-module.exports = { init, insertEmail, setAgentSummary, listRecent, getById, queryEmails };
+module.exports = { init, insertEmail, setAgentSummary, setRead, setStarred, listRecent, getById, queryEmails };

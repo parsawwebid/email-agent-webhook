@@ -64,6 +64,31 @@ app.get('/emails', async (_req, res) => {
   res.json(await db.listRecent(MAX_RECENT));
 });
 
+// Dashboard-only endpoints (no shared secret) to persist read/star state.
+app.post('/emails/:id/read', async (req, res) => {
+  const isRead = req.body.isRead !== false;
+  try {
+    await db.setRead(req.params.id, isRead);
+  } catch (err) {
+    console.error('Failed to persist read state:', err);
+    return res.status(500).json({ error: 'failed to update' });
+  }
+  broadcast({ type: 'email_read', id: req.params.id, isRead });
+  res.status(200).json({ ok: true });
+});
+
+app.post('/emails/:id/star', async (req, res) => {
+  const starred = !!req.body.starred;
+  try {
+    await db.setStarred(req.params.id, starred);
+  } catch (err) {
+    console.error('Failed to persist star state:', err);
+    return res.status(500).json({ error: 'failed to update' });
+  }
+  broadcast({ type: 'email_star', id: req.params.id, starred });
+  res.status(200).json({ ok: true });
+});
+
 app.post('/webhook/email', checkSecret, async (req, res) => {
   const email = req.body;
 
