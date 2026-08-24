@@ -89,6 +89,36 @@ app.post('/emails/:id/star', async (req, res) => {
   res.status(200).json({ ok: true });
 });
 
+app.post('/emails/:id/archive', async (req, res) => {
+  const archived = req.body.archived !== false;
+  try {
+    await db.setArchived(req.params.id, archived);
+  } catch (err) {
+    console.error('Failed to persist archive state:', err);
+    return res.status(500).json({ error: 'failed to update' });
+  }
+  broadcast({ type: 'email_archive', id: req.params.id, archived });
+  res.status(200).json({ ok: true });
+});
+
+// Dashboard-only search (no shared secret) — same filters as /api/emails/search,
+// used by the filter bar in the UI. Excludes archived emails by default.
+app.get('/emails/search', async (req, res) => {
+  const { sender, domain, since, until, has_attachment, keyword, field, limit, include_archived } = req.query;
+  const results = await db.queryEmails({
+    sender,
+    domain,
+    since,
+    until,
+    hasAttachment: has_attachment === 'true',
+    keyword,
+    field,
+    limit,
+    includeArchived: include_archived === 'true',
+  });
+  res.json(results);
+});
+
 app.post('/webhook/email', checkSecret, async (req, res) => {
   const email = req.body;
 

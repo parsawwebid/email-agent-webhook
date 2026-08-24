@@ -69,12 +69,31 @@
 
   .list-pane{ width: 100%; flex: 1; overflow-y: auto; display:flex; flex-direction:column; min-width:0; }
   .list-pane.hidden{ display:none; }
-  .search-box{ flex:none; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .search-box{ flex:none; padding: 12px 20px; border-bottom: 1px solid var(--border); display:flex; align-items:center; gap:8px; }
   .search-box input{
     width:100%; max-width: 480px; box-sizing:border-box; border: 1px solid var(--border); background: var(--panel);
     color: var(--text); border-radius: 24px; padding: 9px 14px; font-size: 13px; font-family: inherit;
   }
   .search-box input:focus{ outline: none; border-color: var(--accent); }
+  .filter-btn{ flex:none; border: 1px solid var(--border); background: var(--panel); color: var(--text-2); width:34px; height:34px; border-radius: 50%; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .filter-btn:hover{ background: var(--row-hover); }
+  .filter-btn.active{ background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+  .filter-btn svg{ width:15px; height:15px; }
+  .filter-panel{ flex:none; display:none; flex-wrap:wrap; gap: 8px 10px; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--panel); }
+  .filter-panel.open{ display:flex; }
+  .filter-panel input[type="text"], .filter-panel input[type="date"], .filter-panel select{
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px;
+    padding: 6px 9px; font-size: 12px; font-family: inherit;
+  }
+  .filter-panel label{ display:flex; align-items:center; gap:5px; font-size:12px; color: var(--text-2); }
+  .filter-panel .fp-field{ display:flex; flex-direction:column; gap:3px; }
+  .filter-panel .fp-field span{ font-size:11px; color: var(--text-3); }
+  .filter-actions{ flex:none; display:flex; gap:8px; align-items:flex-end; }
+  .filter-actions button{
+    border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  .filter-apply{ background: var(--accent); border-color: var(--accent); color:#fff; }
+  .filter-clear{ background: var(--panel); color: var(--text-2); }
   .list-rows{ flex:1; overflow-y:auto; }
   .row{ display:flex; align-items:center; gap:12px; padding: 0 20px; height: 42px; border-bottom: 1px solid var(--border); cursor: pointer; }
   .row:hover{ background: var(--row-hover); box-shadow: inset 1px 0 0 var(--border), inset -1px 0 0 var(--border); }
@@ -90,10 +109,17 @@
   .r-star svg{ width:16px; height:16px; }
   .r-dot{ flex:none; width:6px; height:6px; border-radius:50%; background: transparent; }
   .r-from{ flex:none; width: 160px; font-weight: 400; font-size: 13px; color: var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .r-subject{ flex:1; min-width:0; font-size: 13px; color: var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r-subject{ flex:1; min-width:0; font-size: 13px; color: var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px; }
   .r-subject-text{ color: var(--text); }
-  .r-snippet{ color: var(--text-3); }
-  .r-time{ font-size: 12px; color: var(--text-3); white-space:nowrap; flex:none; width: 56px; text-align:right; }
+  .r-snippet{ color: var(--text-3); overflow:hidden; text-overflow:ellipsis; }
+  .r-clip{ flex:none; width:14px; height:14px; color: var(--text-3); }
+  .r-time-slot{ flex:none; width: 56px; height: 100%; position: relative; }
+  .r-time{ font-size: 12px; color: var(--text-3); white-space:nowrap; position:absolute; inset:0; display:flex; align-items:center; justify-content:flex-end; }
+  .row:hover .r-time{ opacity:0; pointer-events:none; }
+  .r-archive{ opacity:0; border:0; background:none; color: var(--text-2); cursor:pointer; padding:0; position:absolute; inset:0; display:flex; align-items:center; justify-content:flex-end; }
+  .row:hover .r-archive{ opacity:1; }
+  .r-archive:hover{ color: var(--accent); }
+  .r-archive svg{ width:16px; height:16px; }
 
   .detail-pane{ flex: 1; min-width: 0; overflow: hidden; padding: 0 32px 0; display: flex; flex-direction: column; }
   .detail-pane.hidden{ display:none; }
@@ -112,6 +138,9 @@
   .d-body-wrap{ flex: 1; min-height: 0; display: flex; border-top: 1px solid var(--border); margin: 0 -32px; padding: 0 32px 24px; }
   .d-body-frame{ flex: 1; width: 100%; height: 100%; border: 0; background: #fff; }
   .tag{ flex: none; display:inline-flex; align-items:center; gap: 6px; font-size: 12px; margin-bottom: 16px; padding: 6px 12px; border-radius: 8px; background: var(--blue-bg); color: var(--blue); align-self: flex-start; }
+  .d-attachments{ flex:none; display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 16px; }
+  .d-attachment{ display:flex; align-items:center; gap:6px; font-size:12px; color: var(--text-2); border:1px solid var(--border); border-radius:8px; padding:5px 10px; }
+  .d-attachment svg{ width:14px; height:14px; flex:none; color: var(--text-3); }
 </style>
 </head>
 <body>
@@ -128,7 +157,33 @@
 
   <div class="split">
     <div class="list-pane" id="listPane">
-      <div class="search-box"><input type="text" id="searchInput" placeholder="Search mail" /></div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search mail" />
+        <button class="filter-btn" id="filterBtn" aria-label="toggle filters">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        </button>
+      </div>
+      <div class="filter-panel" id="filterPanel">
+        <div class="fp-field"><span>from</span><input type="text" id="fSender" placeholder="name or address" /></div>
+        <div class="fp-field"><span>domain</span><input type="text" id="fDomain" placeholder="example.com" /></div>
+        <div class="fp-field"><span>search in</span>
+          <select id="fField">
+            <option value="all">everywhere</option>
+            <option value="subject">subject</option>
+            <option value="body">body</option>
+            <option value="from">from</option>
+            <option value="to">to</option>
+          </select>
+        </div>
+        <div class="fp-field"><span>keyword</span><input type="text" id="fKeyword" placeholder="keyword" /></div>
+        <div class="fp-field"><span>since</span><input type="date" id="fSince" /></div>
+        <div class="fp-field"><span>until</span><input type="date" id="fUntil" /></div>
+        <label><input type="checkbox" id="fAttachment" /> has attachment</label>
+        <div class="filter-actions">
+          <button type="button" class="filter-apply" id="fApply">apply</button>
+          <button type="button" class="filter-clear" id="fClear">clear</button>
+        </div>
+      </div>
       <div class="list-rows" id="listRows">
         <div class="empty-list" id="emptyList">no email yet</div>
       </div>
@@ -207,6 +262,7 @@
       const row = document.createElement('div');
       row.className = 'row' + (id === selectedId ? ' selected' : '') + (isUnread ? ' unread' : '');
       row.dataset.id = id;
+      const hasAttachment = !!(e.attachments && e.attachments.length);
       row.innerHTML = `
         <input type="checkbox" class="r-check" aria-label="select email" />
         <button type="button" class="r-star${isStarred ? ' on' : ''}" aria-label="star email">
@@ -214,16 +270,28 @@
         </button>
         <span class="r-dot"></span>
         <span class="r-from">${escapeHtml(fromLabel)}</span>
-        <span class="r-subject"><span class="r-subject-text">${escapeHtml(e.subject || '(no subject)')}</span> <span class="r-snippet">- ${escapeHtml(snippetOf(e))}</span></span>
-        <span class="r-time">${fmtTime(e.receivedAt)}</span>
+        <span class="r-subject">
+          ${hasAttachment ? `<svg class="r-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 01-7.78-7.78l9.19-9.19a3.5 3.5 0 014.95 4.95l-9.2 9.19a1.5 1.5 0 01-2.12-2.12l8.49-8.48"/></svg>` : ''}
+          <span class="r-subject-text">${escapeHtml(e.subject || '(no subject)')}</span> <span class="r-snippet">- ${escapeHtml(snippetOf(e))}</span>
+        </span>
+        <span class="r-time-slot">
+          <span class="r-time">${fmtTime(e.receivedAt)}</span>
+          <button type="button" class="r-archive" aria-label="archive email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8M10 13h4"/></svg>
+          </button>
+        </span>
       `;
       row.addEventListener('click', (ev) => {
-        if (ev.target.closest('.r-check') || ev.target.closest('.r-star')) return;
+        if (ev.target.closest('.r-check') || ev.target.closest('.r-star') || ev.target.closest('.r-archive')) return;
         selectEmail(id);
       });
       row.querySelector('.r-star').addEventListener('click', (ev) => {
         ev.stopPropagation();
         toggleStar(id, !e.starred);
+      });
+      row.querySelector('.r-archive').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        archiveEmail(id);
       });
       listRows.appendChild(row);
     });
@@ -268,7 +336,17 @@
     }).catch(err => console.error('Failed to star:', err));
   }
 
-  function backToInbox(){
+  function archiveEmail(id){
+    order = order.filter(x => x !== id);
+    emailsById.delete(id);
+    if (selectedId === id) backToInbox();
+    renderList();
+    fetch(`/emails/${id}/archive`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ archived: true }),
+    }).catch(err => console.error('Failed to archive:', err));
+  }
     selectedId = null;
     detailPane.classList.add('hidden');
     listPane.classList.remove('hidden');
@@ -294,6 +372,7 @@
         <div class="d-meta"><span class="label">date:</span> ${fmtFull(e.receivedAt)}</div>
         <div style="margin-bottom: 16px;"></div>
         ${e.agentSummary ? `<div class="tag">${escapeHtml(e.agentSummary)}</div>` : ''}
+        ${(e.attachments && e.attachments.length) ? `<div class="d-attachments">${e.attachments.map(a => `<span class="d-attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 01-7.78-7.78l9.19-9.19a3.5 3.5 0 014.95 4.95l-9.2 9.19a1.5 1.5 0 01-2.12-2.12l8.49-8.48"/></svg>${escapeHtml(a.filename || a.name || 'attachment')}</span>`).join('')}</div>` : ''}
       </div>
       ${bodyHtml}
     `;
@@ -345,11 +424,12 @@
     ws.onerror = () => ws.close();
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
-      if (msg.type === 'init' || msg.type === 'refresh') setAll(msg.emails);
-      else if (msg.type === 'new_email' && !emailsById.has(msg.email.id)) addNew(msg.email);
+      if (msg.type === 'init' || msg.type === 'refresh') { if (!isFiltering) setAll(msg.emails); }
+      else if (msg.type === 'new_email' && !emailsById.has(msg.email.id)) { if (!isFiltering) addNew(msg.email); }
       else if (msg.type === 'email_update') updateOne(msg.id, msg.agentSummary);
       else if (msg.type === 'email_read') { const e = emailsById.get(msg.id); if (e) { e.isRead = msg.isRead; renderList(); } }
       else if (msg.type === 'email_star') { const e = emailsById.get(msg.id); if (e) { e.starred = msg.starred; renderList(); } }
+      else if (msg.type === 'email_archive' && msg.archived) { order = order.filter(x => x !== msg.id); emailsById.delete(msg.id); renderList(); }
     };
   }
 
@@ -359,6 +439,47 @@
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
+  });
+
+  let isFiltering = false;
+  const filterBtn = document.getElementById('filterBtn');
+  const filterPanel = document.getElementById('filterPanel');
+  filterBtn.addEventListener('click', () => filterPanel.classList.toggle('open'));
+
+  function applyFilters(){
+    const params = new URLSearchParams();
+    const sender = document.getElementById('fSender').value.trim();
+    const domain = document.getElementById('fDomain').value.trim();
+    const field = document.getElementById('fField').value;
+    const keyword = document.getElementById('fKeyword').value.trim();
+    const since = document.getElementById('fSince').value;
+    const until = document.getElementById('fUntil').value;
+    const hasAttachment = document.getElementById('fAttachment').checked;
+    if (sender) params.set('sender', sender);
+    if (domain) params.set('domain', domain);
+    if (keyword) { params.set('keyword', keyword); params.set('field', field); }
+    if (since) params.set('since', new Date(since).toISOString());
+    if (until) params.set('until', new Date(until + 'T23:59:59').toISOString());
+    if (hasAttachment) params.set('has_attachment', 'true');
+    params.set('limit', '100');
+
+    isFiltering = [...params.keys()].some(k => k !== 'limit');
+    filterBtn.classList.toggle('active', isFiltering);
+
+    fetch(`/emails/search?${params.toString()}`)
+      .then(r => r.json())
+      .then(emails => { setAll(emails); })
+      .catch(err => console.error('Filter search failed:', err));
+  }
+
+  document.getElementById('fApply').addEventListener('click', applyFilters);
+  document.getElementById('fClear').addEventListener('click', () => {
+    ['fSender','fDomain','fKeyword','fSince','fUntil'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fField').value = 'all';
+    document.getElementById('fAttachment').checked = false;
+    isFiltering = false;
+    filterBtn.classList.remove('active');
+    fetch('/emails').then(r => r.json()).then(emails => setAll(emails)).catch(err => console.error(err));
   });
 
   connect();

@@ -20,12 +20,14 @@ async function init() {
       attachments JSONB,
       agent_summary TEXT,
       read_at TIMESTAMPTZ,
-      starred BOOLEAN NOT NULL DEFAULT false
+      starred BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
     );
     CREATE INDEX IF NOT EXISTS emails_received_at_idx ON emails (received_at DESC);
   `);
   await pool.query(`ALTER TABLE emails ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;`);
   await pool.query(`ALTER TABLE emails ADD COLUMN IF NOT EXISTS starred BOOLEAN NOT NULL DEFAULT false;`);
+  await pool.query(`ALTER TABLE emails ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;`);
 }
 
 function toRecord(row) {
@@ -41,6 +43,7 @@ function toRecord(row) {
     agentSummary: row.agent_summary || undefined,
     isRead: !!row.read_at,
     starred: !!row.starred,
+    archived: !!row.archived_at,
   };
 }
 
@@ -76,9 +79,16 @@ async function setStarred(id, starred) {
   await pool.query(`UPDATE emails SET starred = $2 WHERE id = $1`, [id, !!starred]);
 }
 
-async function listRecent(limit = 20) {
+async function setArchived(id, archived) {
+  await pool.query(
+    `UPDATE emails SET archived_at = $2 WHERE id = $1`,
+    [id, archived ? new Date().toISOString() : null]
+  );
+}
+
+async function listRecent(limit = 20, includeArchived = false) {
   const { rows } = await pool.query(
-    `SELECT * FROM emails ORDER BY received_at DESC LIMIT $1`,
+    `SELECT * FROM emails ${includeArchived ? '' : 'WHERE archived_at IS NULL'} ORDER BY received_at DESC LIMIT $1`,
     [limit]
   );
   return rows.map(toRecord);
@@ -101,6 +111,7 @@ async function queryEmails(filters = {}) {
   if (filters.since) where.push(`received_at >= ${p(filters.since)}`);
   if (filters.until) where.push(`received_at <= ${p(filters.until)}`);
   if (filters.hasAttachment) where.push(`jsonb_array_length(coalesce(attachments, '[]'::jsonb)) > 0`);
+  if (!filters.includeArchived) where.push(`archived_at IS NULL`);
 
   if (filters.keyword) {
     const kw = p('%' + filters.keyword + '%');
@@ -126,4 +137,4 @@ async function queryEmails(filters = {}) {
 
 const MAX_QUERY_LIMIT = 100;
 
-module.exports = { init, insertEmail, setAgentSummary, setRead, setStarred, listRecent, getById, queryEmails };
+module.exports = { init, insertEmail, setAgentSummary, setRead, setStarred, setArchived, listRecent, getById, queryEmails };
