@@ -90,6 +90,7 @@
   .d-head{ flex: none; }
   .d-subject{ font-size: 19px; font-weight: 600; margin: 0 0 10px; word-break: break-word; }
   .d-meta{ font-size: 13px; color: var(--text-2); margin-bottom: 4px; word-break: break-word; }
+  .d-meta .label{ color: var(--text-3); }
   .d-meta b{ color: var(--text); font-weight: 500; }
   .d-time{ font-size: 12px; color: var(--text-3); margin-bottom: 20px; }
   .d-body{ flex: 1; min-height: 0; overflow-y: auto; font-size: 14px; line-height: 1.8; color: var(--text); white-space: pre-wrap; word-break: break-word; border-top: 1px solid var(--border); padding: 16px 0 24px; }
@@ -191,8 +192,10 @@
     detailPane.innerHTML = `
       <div class="d-head">
         <div class="d-subject">${escapeHtml(e.subject || '(no subject)')}</div>
-        <div class="d-meta"><b>${escapeHtml(e.from)}</b> → ${escapeHtml(e.to)}</div>
-        <div class="d-time">${fmtFull(e.receivedAt)}</div>
+        <div class="d-meta"><span class="label">from:</span> ${escapeHtml(e.from)}</div>
+        <div class="d-meta"><span class="label">to:</span> ${escapeHtml(e.to)}</div>
+        <div class="d-meta"><span class="label">date:</span> ${fmtFull(e.receivedAt)}</div>
+        <div style="margin-bottom: 16px;"></div>
         ${e.agentSummary ? `<div class="tag">${escapeHtml(e.agentSummary)}</div>` : ''}
       </div>
       ${bodyHtml}
