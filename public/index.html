@@ -161,8 +161,7 @@
       row.className = 'row' + (id === selectedId ? ' selected' : '');
       row.dataset.id = id;
       row.innerHTML = `
-        <div class="r-line1"><span class="r-from">${escapeHtml(e.from)}</span><span class="r-time">${fmtTime(e.receivedAt)}</span></div>
-        <div class="r-subject">${escapeHtml(e.subject || '(no subject)')}</div>
+        <div class="r-line1"><span class="r-from">${escapeHtml(e.subject || '(no subject)')}</span><span class="r-time">${fmtTime(e.receivedAt)}</span></div>
       `;
       row.addEventListener('click', () => selectEmail(id));
       listRows.appendChild(row);
