@@ -67,25 +67,39 @@
 
   .split{ flex: 1; display:flex; min-height:0; }
 
-  .list-pane{ width: 300px; flex: none; border-right: 1px solid var(--border); overflow-y: auto; display:flex; flex-direction:column; }
-  .search-box{ flex:none; padding: 10px; border-bottom: 1px solid var(--border); }
+  .list-pane{ width: 100%; flex: 1; overflow-y: auto; display:flex; flex-direction:column; min-width:0; }
+  .list-pane.hidden{ display:none; }
+  .search-box{ flex:none; padding: 12px 20px; border-bottom: 1px solid var(--border); }
   .search-box input{
-    width:100%; box-sizing:border-box; border: 1px solid var(--border); background: var(--bg);
-    color: var(--text); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit;
+    width:100%; max-width: 480px; box-sizing:border-box; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); border-radius: 24px; padding: 9px 14px; font-size: 13px; font-family: inherit;
   }
   .search-box input:focus{ outline: none; border-color: var(--accent); }
   .list-rows{ flex:1; overflow-y:auto; }
-  .row{ padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
-  .row:hover{ background: var(--row-hover); }
+  .row{ display:flex; align-items:center; gap:12px; padding: 0 20px; height: 42px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .row:hover{ background: var(--row-hover); box-shadow: inset 1px 0 0 var(--border), inset -1px 0 0 var(--border); }
+  .row:hover .r-star{ opacity:1; }
   .row.selected{ background: var(--row-selected); }
+  .row.unread .r-from, .row.unread .r-subject-text{ font-weight: 600; color: var(--text); }
+  .row.unread .r-dot{ background: var(--blue); }
   .row.new{ animation: slidein .3s ease-out; }
   @keyframes slidein{ from{ opacity:0; transform: translateY(-4px);} to{ opacity:1; transform:none; } }
-  .r-line1{ display:flex; justify-content:space-between; gap:8px; }
-  .r-from{ font-weight: 600; font-size: 13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .r-time{ font-size: 11px; color: var(--text-3); white-space:nowrap; flex:none; }
-  .r-subject{ font-size: 12px; color: var(--text-2); margin-top: 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r-check{ flex:none; width:16px; height:16px; accent-color: var(--accent); cursor:pointer; }
+  .r-star{ flex:none; width:16px; height:16px; opacity:0; cursor:pointer; color: var(--text-3); background:none; border:0; padding:0; display:flex; align-items:center; justify-content:center; }
+  .r-star.on{ opacity:1; color: var(--accent); }
+  .r-star svg{ width:16px; height:16px; }
+  .r-dot{ flex:none; width:6px; height:6px; border-radius:50%; background: transparent; }
+  .r-from{ flex:none; width: 160px; font-weight: 400; font-size: 13px; color: var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r-subject{ flex:1; min-width:0; font-size: 13px; color: var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r-subject-text{ color: var(--text); }
+  .r-snippet{ color: var(--text-3); }
+  .r-time{ font-size: 12px; color: var(--text-3); white-space:nowrap; flex:none; width: 56px; text-align:right; }
 
-  .detail-pane{ flex: 1; min-width: 0; overflow: hidden; padding: 24px 32px 0; display: flex; flex-direction: column; }
+  .detail-pane{ flex: 1; min-width: 0; overflow: hidden; padding: 0 32px 0; display: flex; flex-direction: column; }
+  .detail-pane.hidden{ display:none; }
+  .back-btn{ flex:none; display:flex; align-items:center; gap:8px; border:0; background:none; color: var(--text-2); cursor:pointer; font-size:13px; font-family:inherit; padding: 16px 0 0; margin-bottom: 8px; }
+  .back-btn:hover{ color: var(--text); }
+  .back-btn svg{ width:16px; height:16px; }
   .empty-detail, .empty-list{ color: var(--text-3); font-size: 13px; text-align:center; padding: 60px 20px; }
   .d-head{ flex: none; }
   .d-subject{ font-size: 19px; font-weight: 600; margin: 0 0 10px; word-break: break-word; }
@@ -119,8 +133,14 @@
         <div class="empty-list" id="emptyList">no email yet</div>
       </div>
     </div>
-    <div class="detail-pane" id="detailPane">
-      <div class="empty-detail">select an email to read it</div>
+    <div class="detail-pane hidden" id="detailPane">
+      <button class="back-btn" id="backBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        back to inbox
+      </button>
+      <div id="detailContent" style="flex:1; min-height:0; display:flex; flex-direction:column;">
+        <div class="empty-detail">select an email to read it</div>
+      </div>
     </div>
   </div>
 
@@ -139,6 +159,11 @@
   let order = [];
   let selectedId = null;
   let searchTerm = '';
+
+  function snippetOf(e){
+    const raw = (e.text || (e.html || '').replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
+    return raw;
+  }
 
   function matchesSearch(e){
     if (!searchTerm) return true;
@@ -175,13 +200,31 @@
     listRows.querySelectorAll('.row').forEach(r => r.remove());
     visible.forEach(id => {
       const e = emailsById.get(id);
+      const isUnread = !e.isRead;
+      const isStarred = !!e.starred;
+      const { name, address } = parseAddr(e.from);
+      const fromLabel = name || address || '(unknown)';
       const row = document.createElement('div');
-      row.className = 'row' + (id === selectedId ? ' selected' : '');
+      row.className = 'row' + (id === selectedId ? ' selected' : '') + (isUnread ? ' unread' : '');
       row.dataset.id = id;
       row.innerHTML = `
-        <div class="r-line1"><span class="r-from">${escapeHtml(e.subject || '(no subject)')}</span><span class="r-time">${fmtTime(e.receivedAt)}</span></div>
+        <input type="checkbox" class="r-check" aria-label="select email" />
+        <button type="button" class="r-star${isStarred ? ' on' : ''}" aria-label="star email">
+          <svg viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </button>
+        <span class="r-dot"></span>
+        <span class="r-from">${escapeHtml(fromLabel)}</span>
+        <span class="r-subject"><span class="r-subject-text">${escapeHtml(e.subject || '(no subject)')}</span> <span class="r-snippet">- ${escapeHtml(snippetOf(e))}</span></span>
+        <span class="r-time">${fmtTime(e.receivedAt)}</span>
       `;
-      row.addEventListener('click', () => selectEmail(id));
+      row.addEventListener('click', (ev) => {
+        if (ev.target.closest('.r-check') || ev.target.closest('.r-star')) return;
+        selectEmail(id);
+      });
+      row.querySelector('.r-star').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        toggleStar(id, !e.starred);
+      });
       listRows.appendChild(row);
     });
   }
@@ -193,20 +236,57 @@
 
   function selectEmail(id){
     selectedId = id;
-    listRows.querySelectorAll('.row').forEach(r => r.classList.toggle('selected', r.dataset.id === id));
+    listPane.classList.add('hidden');
+    detailPane.classList.remove('hidden');
     renderDetail();
+    const e = emailsById.get(id);
+    if (e && !e.isRead) {
+      e.isRead = true;
+      renderList();
+      markRead(id, true);
+    } else {
+      renderList();
+    }
   }
 
+  function markRead(id, isRead){
+    fetch(`/emails/${id}/read`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ isRead }),
+    }).catch(err => console.error('Failed to mark read:', err));
+  }
+
+  function toggleStar(id, starred){
+    const e = emailsById.get(id);
+    if (e) e.starred = starred;
+    renderList();
+    fetch(`/emails/${id}/star`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ starred }),
+    }).catch(err => console.error('Failed to star:', err));
+  }
+
+  function backToInbox(){
+    selectedId = null;
+    detailPane.classList.add('hidden');
+    listPane.classList.remove('hidden');
+  }
+
+  document.getElementById('backBtn').addEventListener('click', backToInbox);
+
   function renderDetail(){
+    const detailContent = document.getElementById('detailContent');
     const e = emailsById.get(selectedId);
-    if (!e){ detailPane.innerHTML = '<div class="empty-detail">select an email to read it</div>'; return; }
+    if (!e){ detailContent.innerHTML = '<div class="empty-detail">select an email to read it</div>'; return; }
 
     const hasHtml = !!(e.html && e.html.trim());
     const bodyHtml = hasHtml
       ? `<div class="d-body-wrap"><iframe class="d-body-frame" id="bodyFrame" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe></div>`
       : `<div class="d-body">${escapeHtml(e.text || '(empty body)')}</div>`;
 
-    detailPane.innerHTML = `
+    detailContent.innerHTML = `
       <div class="d-head">
         <div class="d-subject">${escapeHtml(e.subject || '(no subject)')}</div>
         <div class="d-meta"><span class="label">from:</span> ${fmtAddr(e.from)}</div>
@@ -268,6 +348,8 @@
       if (msg.type === 'init' || msg.type === 'refresh') setAll(msg.emails);
       else if (msg.type === 'new_email' && !emailsById.has(msg.email.id)) addNew(msg.email);
       else if (msg.type === 'email_update') updateOne(msg.id, msg.agentSummary);
+      else if (msg.type === 'email_read') { const e = emailsById.get(msg.id); if (e) { e.isRead = msg.isRead; renderList(); } }
+      else if (msg.type === 'email_star') { const e = emailsById.get(msg.id); if (e) { e.starred = msg.starred; renderList(); } }
     };
   }
 
