@@ -347,6 +347,7 @@
       body: JSON.stringify({ archived: true }),
     }).catch(err => console.error('Failed to archive:', err));
   }
+  function backToInbox(){
     selectedId = null;
     detailPane.classList.add('hidden');
     listPane.classList.remove('hidden');
